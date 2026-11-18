@@ -1,0 +1,7 @@
+{
+  "scripts": [
+    "typecheck",
+    "build"
+  ],
+  "description": "Add a local PWA icon generator for existing logo files and Lucide marks, with 192px, 512px and 180px PNG outputs and overwrite protection. Update PWA instructions to use the generator."
+}

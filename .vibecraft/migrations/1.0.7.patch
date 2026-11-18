@@ -1,0 +1,48 @@
+diff --git a/.opencode/skills/pwa/SKILL.md b/.opencode/skills/pwa/SKILL.md
+index 1873d0f01e61b91a13a13d2e3cc73ddd7eea665d..7c407ec58f707401576a8aa77b2609f4ec1935c2 100644
+--- a/.opencode/skills/pwa/SKILL.md
++++ b/.opencode/skills/pwa/SKILL.md
+@@ -8,7 +8,7 @@ description: Use when the user requests PWA installation, adding a site to the h
+ ## Choose The Requested Behavior
+ 
+ - For application icons, follow [icons.md](references/icons.md) and use the bundled local generator.
+-- For installation or a general PWA request, follow [installation.md](references/installation.md). A manifest and product icons support installation without an offline service worker.
++- For installation or a general PWA request, follow [installation.md](references/installation.md) to add the manifest, product icons, and an installation action in the app's existing interface.
+ - When offline support is requested, also follow [offline.md](references/offline.md). Select the mode from the actual `next.config.ts`: static export can cache the exported site; a server deployment gets a self-contained connection-loss page by default.
+ - Offline editing, private data access, write queues, synchronization, push notifications, and app-store distribution are separate features. Design them only when requested. A server-backed app can support richer offline behavior, but the supplied fallback does not implement it.
+ 
+diff --git a/.opencode/skills/pwa/references/installation.md b/.opencode/skills/pwa/references/installation.md
+index 7f555a151b2a8bba6e5a3363fb5dd1d1d281aff5..1de1bf23706238871d7940042cbac7e4fe0c107b 100644
+--- a/.opencode/skills/pwa/references/installation.md
++++ b/.opencode/skills/pwa/references/installation.md
+@@ -57,10 +57,20 @@ Preserve the current root layout and metadata exports. If adding Apple-specific
+ 
+ An installation-only request needs no service worker, caching scripts, build-hook changes, offline fallback, or new dependency.
+ 
+-If an in-page installation button is requested, use `beforeinstallprompt` only when the browser actually exposes it; call its prompt from a user gesture. Hide the button when already installed or no prompt is available. For iOS, show Share → Add to Home Screen instructions when useful. Do not display an always-enabled button that cannot install anything.
++## In-App Installation
++
++Include an installation action, such as "Install app", as part of an installation or general PWA request. Place it where visitors can find it in the existing interface, such as the header, navigation menu, or settings. Reuse the app's components, language, and visual style. Show the installation instructions in the current page or a dialog.
++
++- When the browser exposes `beforeinstallprompt`, capture and retain the event in a client component. The installation action calls the retained event's `prompt()` from the user's click and lets the browser ask for confirmation. Each event can be prompted only once; clear it after use and wait for a new event before offering another system prompt.
++- When no install prompt is available, the action opens instructions for the current browser instead. On iOS, explain Share → Add to Home Screen → Add; mention Open as Web App when that option is shown. A page button cannot trigger iOS installation directly. For other browsers, point to their installation or home-screen menu when supported; otherwise explain how to open the site in a browser that supports installation.
++- Hide the action after `appinstalled` in the current session and when running as an installed app. Check the `display-mode: standalone` or `display-mode: fullscreen` media query and iOS `navigator.standalone`; do not infer that an app is installed merely because `beforeinstallprompt` has not fired.
++
++Keep browser event listeners and display-mode subscriptions in the client component's lifecycle and remove them on unmount. When browser checks are available, verify the system-prompt action, fallback instructions, and visibility in installed mode.
+ 
+ ## Official References
+ 
+ - [Next.js PWA guide](https://nextjs.org/docs/app/guides/progressive-web-apps)
+ - [Next.js manifest convention](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/manifest)
+ - [MDN installation requirements and browser controls](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)
++- [MDN beforeinstallprompt event](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeinstallprompt_event)
++- [Apple: Turn a website into an app in Safari on iPhone](https://support.apple.com/guide/iphone/iphea86e5236/ios)
+diff --git a/.vibecraft/template.json b/.vibecraft/template.json
+index e025fe32913a122e660d8ed3d933c6cc03b73a66..bcf6b6eb9d776b144f3128a6321afbe59f08eca5 100644
+--- a/.vibecraft/template.json
++++ b/.vibecraft/template.json
+@@ -1,3 +1,3 @@
+ {
+-  "version": "1.0.6"
++  "version": "1.0.7"
+ }

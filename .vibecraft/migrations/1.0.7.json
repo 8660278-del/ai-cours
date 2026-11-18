@@ -1,0 +1,7 @@
+{
+  "scripts": [
+    "typecheck",
+    "build"
+  ],
+  "description": "Update the PWA skill to include an installation action in the existing app interface, with a browser install prompt when available, platform-specific instructions otherwise, and hidden controls in installed mode."
+}

@@ -1,0 +1,7 @@
+{
+  "scripts": [
+    "typecheck",
+    "build"
+  ],
+  "description": "Add opt-in PWA guidance in AGENTS.md and the pwa skill, including installation instructions and inactive offline worker assets. Enable installation or offline behavior only when the user requests it, preserving application branding and customized files. This migration does not change application layout, metadata, routing, or build behavior."
+}

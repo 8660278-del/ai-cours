@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#18181b" />
+    <title>Нет подключения к интернету</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        min-height: 100svh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background: light-dark(#fafafa, #18181b);
+        color: light-dark(#18181b, #fafafa);
+      }
+      main {
+        max-width: 28rem;
+        padding: 2rem;
+        text-align: center;
+      }
+      svg {
+        width: 3rem;
+        height: 3rem;
+        color: light-dark(#71717a, #a1a1aa);
+      }
+      h1 {
+        font-size: 1.5rem;
+        line-height: 1.3;
+      }
+      p {
+        line-height: 1.6;
+        color: light-dark(#52525b, #a1a1aa);
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.8rem 1.2rem;
+        border: 0;
+        border-radius: 0.6rem;
+        font: inherit;
+        background: light-dark(#18181b, #fafafa);
+        color: light-dark(#fafafa, #18181b);
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 3px solid #3b82f6;
+        outline-offset: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path
+          d="m2 2 20 20M8.5 16.5a5 5 0 0 1 7 0M12 20h.01M5 12.5a10 10 0 0 1 5-2.3M16.5 10.7a10 10 0 0 1 2.5 1.8M2 8.8a15.5 15.5 0 0 1 4.1-2.6M10.5 4.5A15.5 15.5 0 0 1 22 8.8"
+        />
+      </svg>
+      <h1>Нет подключения к интернету</h1>
+      <p>Проверьте подключение и попробуйте снова.</p>
+      <button type="button" onclick="window.location.reload()">
+        Попробовать снова
+      </button>
+    </main>
+  </body>
+</html>

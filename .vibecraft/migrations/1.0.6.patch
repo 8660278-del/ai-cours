@@ -1,0 +1,198 @@
+diff --git a/.opencode/skills/pwa/SKILL.md b/.opencode/skills/pwa/SKILL.md
+index 2e201a43427b14151cd1cb1468311c7e9c2c837d..1873d0f01e61b91a13a13d2e3cc73ddd7eea665d 100644
+--- a/.opencode/skills/pwa/SKILL.md
++++ b/.opencode/skills/pwa/SKILL.md
+@@ -7,6 +7,7 @@ description: Use when the user requests PWA installation, adding a site to the h
+ 
+ ## Choose The Requested Behavior
+ 
++- For application icons, follow [icons.md](references/icons.md) and use the bundled local generator.
+ - For installation or a general PWA request, follow [installation.md](references/installation.md). A manifest and product icons support installation without an offline service worker.
+ - When offline support is requested, also follow [offline.md](references/offline.md). Select the mode from the actual `next.config.ts`: static export can cache the exported site; a server deployment gets a self-contained connection-loss page by default.
+ - Offline editing, private data access, write queues, synchronization, push notifications, and app-store distribution are separate features. Design them only when requested. A server-backed app can support richer offline behavior, but the supplied fallback does not implement it.
+diff --git a/.opencode/skills/pwa/references/icons.md b/.opencode/skills/pwa/references/icons.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..0b8f3a1e1f75c3ec8c789fd15d7744601991b095
+--- /dev/null
++++ b/.opencode/skills/pwa/references/icons.md
+@@ -0,0 +1,35 @@
++# Application Icons
++
++Generate icon sizes locally with the bundled helper. It uses `sharp` from the project's installed Next.js dependencies and, for vector marks, the existing `lucide-react`, React, and React DOM packages.
++
++## Choose The Source
++
++1. Check the current manifest, metadata, logo references, and header component. Reuse existing app icons when their PNG dimensions and branding are already suitable.
++2. For an existing logo file, pass its local SVG or raster path to `--source`. Select it from its role in the application code and filename; use `sharp(...).metadata()` to inspect raster dimensions. Cover images and page screenshots are not app logos.
++3. If the product uses a Lucide mark, pass its exact exported component name to `--lucide`, such as `PawPrint` or `Sparkles`, and use the product's colors. If no logo exists, choose a simple Lucide mark appropriate to the app as a fallback and mention that choice in the result.
++
++This workflow uses source code, SVG text, and image metadata; it does not require sending a bitmap to the model or calling an image-generation service.
++
++## Generate The Files
++
++Run from the project root, using the selected logo path:
++
++```shell
++node .opencode/skills/pwa/scripts/generate-icons.mjs --source public/assets/logo.svg --background '#ffffff'
++```
++
++Or render the product's Lucide mark directly:
++
++```shell
++node .opencode/skills/pwa/scripts/generate-icons.mjs --lucide PawPrint --background '#0f766e' --foreground '#ffffff'
++```
++
++Replace the example name and hex colors with the product's. The helper fits the mark inside an opaque square with padding, preserves its aspect ratio, and writes:
++
++- `public/icons/icon-192.png` — 192x192 PNG.
++- `public/icons/icon-512.png` — 512x512 PNG.
++- `app/apple-icon.png` — 180x180 PNG, automatically linked by Next.js.
++
++Lucide mode also saves the vector source to `.vibecraft/assets/pwa-icon.svg`. Existing outputs are preserved unless `--overwrite` is supplied; use that flag only when deliberately regenerating them. Keep a suitable existing Apple icon convention if the app already has one.
++
++The command reports actual output dimensions. Use these PNGs in the manifest with `purpose: "any"`. Declare a separate maskable icon only when its artwork is designed for the maskable safe area. Generated files are ordinary application assets; no icon-generation step is needed in the production build.
+diff --git a/.opencode/skills/pwa/references/installation.md b/.opencode/skills/pwa/references/installation.md
+index f88b641c2c08c8109f6a78ebf37250ab40d3e9fb..7f555a151b2a8bba6e5a3363fb5dd1d1d281aff5 100644
+--- a/.opencode/skills/pwa/references/installation.md
++++ b/.opencode/skills/pwa/references/installation.md
+@@ -2,7 +2,7 @@
+ 
+ ## Product Identity And Icons
+ 
+-Reuse the app's current name, description, theme, and logo. Use the `asset-workflow` skill when selecting or creating product assets. Produce real PNG icons at 192x192 and 512x512 in `public/icons/`, and a 180x180 Apple icon at `app/apple-icon.png` (Next.js links this file automatically). Keep a suitable existing Apple icon convention if the app already has one.
++Reuse the app's current name, description, theme, and logo. Follow [icons.md](icons.md) to generate the required PNG sizes with the bundled local helper, using an existing logo file or the product's Lucide mark.
+ 
+ Use an existing branding config if available. Otherwise create a small shared config only if needed to keep the manifest and metadata consistent, populated from the actual product. Do not rename an existing app to a generic template name. Regenerate raster sizes from the source artwork rather than changing only a filename or declared size. Declare `purpose: "maskable"` only for artwork designed with a safe area; ordinary icons use `"any"`.
+ 
+diff --git a/.opencode/skills/pwa/scripts/generate-icons.mjs b/.opencode/skills/pwa/scripts/generate-icons.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..ab5be6e653f09e3045e080ce7c07fadbd4e51087
+--- /dev/null
++++ b/.opencode/skills/pwa/scripts/generate-icons.mjs
+@@ -0,0 +1,117 @@
++import { access, mkdir, writeFile } from "node:fs/promises";
++import { createRequire } from "node:module";
++import path from "node:path";
++import { parseArgs } from "node:util";
++
++async function main() {
++  const { values } = parseArgs({
++    options: {
++      source: { type: "string" },
++      lucide: { type: "string" },
++      background: { type: "string", default: "#ffffff" },
++      foreground: { type: "string", default: "#18181b" },
++      overwrite: { type: "boolean", default: false },
++      help: { type: "boolean", short: "h", default: false },
++    },
++  });
++  if (values.help) {
++    console.log(`Run from the project root:
++  node .opencode/skills/pwa/scripts/generate-icons.mjs --source public/logo.svg --background '#ffffff'
++  node .opencode/skills/pwa/scripts/generate-icons.mjs --lucide Sparkles --background '#18181b' --foreground '#ffffff'
++
++Use exactly one of --source or --lucide. Add --overwrite to replace existing outputs.
++Outputs: public/icons/icon-192.png, public/icons/icon-512.png, app/apple-icon.png.
++Lucide mode also saves .vibecraft/assets/pwa-icon.svg.`);
++    return;
++  }
++  if (Boolean(values.source) === Boolean(values.lucide)) {
++    throw new Error("Specify exactly one of --source or --lucide.");
++  }
++  for (const key of ["background", "foreground"]) {
++    if (!/^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(values[key])) {
++      throw new Error(`--${key} must be an opaque hex color, such as #18181b.`);
++    }
++  }
++
++  const root = process.cwd();
++  const require = createRequire(path.join(root, "package.json"));
++  const sharp = require("sharp");
++  const outputs = [
++    ["public/icons/icon-192.png", 192],
++    ["public/icons/icon-512.png", 512],
++    ["app/apple-icon.png", 180],
++  ];
++  const svgPath = ".vibecraft/assets/pwa-icon.svg";
++  let input;
++  let svg;
++  if (values.source) {
++    input = path.resolve(root, values.source);
++  } else {
++    const { createElement } = require("react");
++    const { renderToStaticMarkup } = require("react-dom/server");
++    const icons = require("lucide-react");
++    if (!Object.hasOwn(icons, values.lucide)) {
++      throw new Error(`Unknown Lucide export: ${values.lucide}`);
++    }
++    svg = renderToStaticMarkup(
++      createElement(icons[values.lucide], {
++        size: 384,
++        color: values.foreground,
++        strokeWidth: 2,
++      })
++    );
++    input = Buffer.from(svg);
++  }
++
++  if (!values.overwrite) {
++    for (const relative of [
++      ...outputs.map(([file]) => file),
++      ...(svg ? [svgPath] : []),
++    ]) {
++      try {
++        await access(path.join(root, relative));
++      } catch (error) {
++        if (error.code === "ENOENT") continue;
++        throw error;
++      }
++      throw new Error(
++        `${relative} already exists. Reuse it or pass --overwrite to regenerate.`
++      );
++    }
++  }
++
++  const mark = await sharp(input, { density: 144 })
++    .rotate()
++    .resize({ width: 384, height: 384, fit: "inside" })
++    .png()
++    .toBuffer();
++  const master = await sharp({
++    create: {
++      width: 512,
++      height: 512,
++      channels: 3,
++      background: values.background,
++    },
++  })
++    .composite([{ input: mark, gravity: "centre" }])
++    .png()
++    .toBuffer();
++
++  if (svg) {
++    await mkdir(path.dirname(path.join(root, svgPath)), { recursive: true });
++    await writeFile(path.join(root, svgPath), svg + "\n");
++  }
++  for (const [relative, size] of outputs) {
++    const target = path.join(root, relative);
++    await mkdir(path.dirname(target), { recursive: true });
++    const result = await sharp(master).resize(size, size).png().toFile(target);
++    console.log(
++      `${relative}: ${result.format}, ${result.width}x${result.height}`
++    );
++  }
++}
++
++main().catch((error) => {
++  console.error(error.message);
++  process.exitCode = 1;
++});
+diff --git a/.vibecraft/template.json b/.vibecraft/template.json
+index e37bf6f9ff1433922c571fb5dd3ea3c32ac66421..e025fe32913a122e660d8ed3d933c6cc03b73a66 100644
+--- a/.vibecraft/template.json
++++ b/.vibecraft/template.json
+@@ -1,3 +1,3 @@
+ {
+-  "version": "1.0.5"
++  "version": "1.0.6"
+ }

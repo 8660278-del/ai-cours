@@ -1,0 +1,467 @@
+diff --git a/.opencode/skills/pwa/SKILL.md b/.opencode/skills/pwa/SKILL.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..2e201a43427b14151cd1cb1468311c7e9c2c837d
+--- /dev/null
++++ b/.opencode/skills/pwa/SKILL.md
+@@ -0,0 +1,29 @@
++---
++name: pwa
++description: Use when the user requests PWA installation, adding a site to the home screen, "установка сайта как приложения", or offline support in this Next.js template.
++---
++
++# PWA And Offline Support
++
++## Choose The Requested Behavior
++
++- For installation or a general PWA request, follow [installation.md](references/installation.md). A manifest and product icons support installation without an offline service worker.
++- When offline support is requested, also follow [offline.md](references/offline.md). Select the mode from the actual `next.config.ts`: static export can cache the exported site; a server deployment gets a self-contained connection-loss page by default.
++- Offline editing, private data access, write queues, synchronization, push notifications, and app-store distribution are separate features. Design them only when requested. A server-backed app can support richer offline behavior, but the supplied fallback does not implement it.
++
++## Inspect Before Wiring
++
++Read the current package scripts, Next configuration, deployment prefix, root layout, metadata, branding assets, and any existing manifest or worker. Extend an existing PWA setup rather than adding a second manifest, registration, or competing cache strategy.
++
++Keep the product's current name, description, icons, colors, layout, and metadata. Preserve `BridgeProvider`, handshake/inspector behavior, health checks, and `Toaster`. Change app files only as needed for the requested feature; do not replace a customized layout with template code.
++
++## Deployment And Verification
++
++- Use the existing `BASE_PATH` contract for prefixed deployments. Keep manifest, start URL, icons, and worker inside the application's path. Never broaden a worker scope to the origin root to bypass a path problem.
++- Installation requires HTTPS in production. Preview only needs to remain usable; do not change proxy or platform configuration to make preview installable.
++- Register an offline worker only in production. The development server must remain usable without a worker.
++- Follow `AGENTS.md` and task-specific verification limits. When allowed, run the existing check and production build commands on the host; do not add a test suite just to enable PWA.
++- Inspect the production HTML's manifest link, manifest response, real icon dimensions and paths, and the final start URL after redirects, including a configured prefix. For offline work, also inspect the generated worker and verify a successful online load followed by an offline reload and navigation.
++- Report which behavior was enabled, the limits of offline operation, and which production/browser checks actually ran. Browser installation controls vary; do not promise an install prompt on every device.
++
++The reference files link to official Next.js and browser documentation for framework-specific details.
+diff --git a/.opencode/skills/pwa/assets/build-pwa.mjs b/.opencode/skills/pwa/assets/build-pwa.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..db43945aa1275c77e4873e49e1d639a41161f39f
+--- /dev/null
++++ b/.opencode/skills/pwa/assets/build-pwa.mjs
+@@ -0,0 +1,89 @@
++import { createHash } from "node:crypto";
++import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
++import path from "node:path";
++import { pathToFileURL } from "node:url";
++
++async function exportedFiles(directory, prefix = "") {
++  const files = [];
++  for (const entry of await readdir(directory, { withFileTypes: true })) {
++    const relative = `${prefix}${entry.name}`;
++    if (
++      relative === "api" ||
++      entry.name.startsWith(".") ||
++      relative === "sw.js" ||
++      relative.endsWith(".map")
++    )
++      continue;
++    if (entry.isDirectory()) {
++      files.push(
++        ...(await exportedFiles(
++          path.join(directory, entry.name),
++          `${relative}/`
++        ))
++      );
++    } else if (entry.isFile()) {
++      files.push(relative);
++    }
++  }
++  return files.sort();
++}
++
++export async function buildPwa({
++  projectDir = process.cwd(),
++  staticExport = false,
++} = {}) {
++  const root = path.join(projectDir, staticExport ? "out" : "public");
++  const files = staticExport ? await exportedFiles(root) : ["offline.html"];
++  if (!files.includes("offline.html"))
++    throw new Error("PWA build requires offline.html");
++  const encodePath = (file) =>
++    file.split("/").map(encodeURIComponent).join("/");
++  const routes = Object.create(null);
++  for (const file of files.filter((file) => file.endsWith(".html"))) {
++    const encoded = encodePath(file);
++    routes[encoded] = encoded;
++    if (file === "index.html" || file.endsWith("/index.html")) {
++      const directory = encoded.slice(0, -"index.html".length);
++      routes[directory] = encoded;
++      if (directory) routes[directory.slice(0, -1)] = encoded;
++    } else {
++      const route = encoded.slice(0, -".html".length);
++      routes[route] = encoded;
++      routes[`${route}/`] = encoded;
++    }
++  }
++  const worker = await readFile(
++    new URL("./pwa-worker.js", import.meta.url),
++    "utf8"
++  );
++  const mode = staticExport ? "static" : "server";
++  const hash = createHash("sha256")
++    .update(JSON.stringify({ mode, routes }))
++    .update(worker);
++  for (const file of files) {
++    hash
++      .update(file)
++      .update("\0")
++      .update(
++        createHash("sha256")
++          .update(await readFile(path.join(root, file)))
++          .digest()
++      );
++  }
++  const version = hash.digest("hex").slice(0, 20);
++  const source = `/* Generated by scripts/build-pwa.mjs. Do not edit. */\nconst PWA_MODE = ${JSON.stringify(mode)};\nconst BUILD_VERSION = ${JSON.stringify(version)};\nconst PRECACHE_PATHS = ${JSON.stringify(files.map(encodePath))};\nconst NAVIGATION_ROUTES = ${JSON.stringify(routes)};\n\n${worker}`;
++  await mkdir(path.join(projectDir, "public"), { recursive: true });
++  await writeFile(path.join(projectDir, "public/sw.js"), source);
++  if (staticExport) await writeFile(path.join(root, "sw.js"), source);
++  console.log(`PWA: ${mode}, ${files.length} resources, revision ${version}`);
++}
++
++if (
++  process.argv[1] &&
++  pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url
++) {
++  await buildPwa({
++    staticExport:
++      process.argv.includes("--static") || process.env.OUTPUT_MODE === "export",
++  });
++}
+diff --git a/.opencode/skills/pwa/assets/offline.html b/.opencode/skills/pwa/assets/offline.html
+new file mode 100644
+index 0000000000000000000000000000000000000000..5ed494aa327669b75dfac95c872911054834c070
+--- /dev/null
++++ b/.opencode/skills/pwa/assets/offline.html
+@@ -0,0 +1,77 @@
++<!doctype html>
++<html lang="ru">
++  <head>
++    <meta charset="utf-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1" />
++    <meta name="theme-color" content="#18181b" />
++    <title>Нет подключения к интернету</title>
++    <style>
++      :root {
++        color-scheme: light dark;
++        font-family: system-ui, sans-serif;
++      }
++      body {
++        min-height: 100svh;
++        margin: 0;
++        display: grid;
++        place-items: center;
++        background: light-dark(#fafafa, #18181b);
++        color: light-dark(#18181b, #fafafa);
++      }
++      main {
++        max-width: 28rem;
++        padding: 2rem;
++        text-align: center;
++      }
++      svg {
++        width: 3rem;
++        height: 3rem;
++        color: light-dark(#71717a, #a1a1aa);
++      }
++      h1 {
++        font-size: 1.5rem;
++        line-height: 1.3;
++      }
++      p {
++        line-height: 1.6;
++        color: light-dark(#52525b, #a1a1aa);
++      }
++      button {
++        margin-top: 1rem;
++        padding: 0.8rem 1.2rem;
++        border: 0;
++        border-radius: 0.6rem;
++        font: inherit;
++        background: light-dark(#18181b, #fafafa);
++        color: light-dark(#fafafa, #18181b);
++        cursor: pointer;
++      }
++      button:focus-visible {
++        outline: 3px solid #3b82f6;
++        outline-offset: 4px;
++      }
++    </style>
++  </head>
++  <body>
++    <main>
++      <svg
++        xmlns="http://www.w3.org/2000/svg"
++        viewBox="0 0 24 24"
++        fill="none"
++        stroke="currentColor"
++        stroke-width="1.5"
++        stroke-linecap="round"
++        aria-hidden="true"
++      >
++        <path
++          d="m2 2 20 20M8.5 16.5a5 5 0 0 1 7 0M12 20h.01M5 12.5a10 10 0 0 1 5-2.3M16.5 10.7a10 10 0 0 1 2.5 1.8M2 8.8a15.5 15.5 0 0 1 4.1-2.6M10.5 4.5A15.5 15.5 0 0 1 22 8.8"
++        />
++      </svg>
++      <h1>Нет подключения к интернету</h1>
++      <p>Проверьте подключение и попробуйте снова.</p>
++      <button type="button" onclick="window.location.reload()">
++        Попробовать снова
++      </button>
++    </main>
++  </body>
++</html>
+diff --git a/.opencode/skills/pwa/assets/pwa-worker.js b/.opencode/skills/pwa/assets/pwa-worker.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..b7677ad458bb35d4b0c9dfe00f7c1660f258f1ce
+--- /dev/null
++++ b/.opencode/skills/pwa/assets/pwa-worker.js
+@@ -0,0 +1,90 @@
++/* Build constants are prepended by scripts/build-pwa.mjs. */
++/* global PWA_MODE, BUILD_VERSION, PRECACHE_PATHS, NAVIGATION_ROUTES */
++
++const APP_SCOPE = new URL(self.registration.scope);
++const CACHE_PREFIX = `vibecraft:${APP_SCOPE.href}:`;
++const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
++const PRECACHE_SET = new Set(PRECACHE_PATHS);
++const resourceUrl = (relative) => new URL(relative, APP_SCOPE).href;
++
++self.addEventListener("install", (event) => {
++  event.waitUntil(
++    (async () => {
++      try {
++        const cache = await caches.open(CACHE_NAME);
++        await cache.addAll(
++          PRECACHE_PATHS.map(
++            (file) => new Request(resourceUrl(file), { cache: "reload" })
++          )
++        );
++      } catch (error) {
++        await caches.delete(CACHE_NAME);
++        throw error;
++      }
++      // Keep this worker waiting until the previous version's clients close.
++    })()
++  );
++});
++
++self.addEventListener("activate", (event) => {
++  event.waitUntil(
++    (async () => {
++      const names = await caches.keys();
++      await Promise.all(
++        names
++          .filter(
++            (name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME
++          )
++          .map((name) => caches.delete(name))
++      );
++      await self.clients.claim();
++    })()
++  );
++});
++
++self.addEventListener("fetch", (event) => {
++  const { request } = event;
++  const url = new URL(request.url);
++  if (
++    request.method !== "GET" ||
++    url.origin !== APP_SCOPE.origin ||
++    !url.pathname.startsWith(APP_SCOPE.pathname)
++  )
++    return;
++  const relative = url.pathname.slice(APP_SCOPE.pathname.length);
++  if (relative === "api" || relative.startsWith("api/")) return;
++
++  if (request.mode === "navigate") {
++    event.respondWith(
++      (async () => {
++        const cache = await caches.open(CACHE_NAME);
++        if (
++          PWA_MODE === "static" &&
++          Object.hasOwn(NAVIGATION_ROUTES, relative)
++        ) {
++          const cached = await cache.match(
++            resourceUrl(NAVIGATION_ROUTES[relative])
++          );
++          if (cached) return cached;
++        }
++        try {
++          return await fetch(request);
++        } catch {
++          return (
++            (await cache.match(resourceUrl("offline.html"))) || Response.error()
++          );
++        }
++      })()
++    );
++    return;
++  }
++
++  if (PWA_MODE === "static" && PRECACHE_SET.has(relative)) {
++    event.respondWith(
++      (async () => {
++        const cache = await caches.open(CACHE_NAME);
++        return (await cache.match(resourceUrl(relative))) || fetch(request);
++      })()
++    );
++  }
++});
+diff --git a/.opencode/skills/pwa/references/installation.md b/.opencode/skills/pwa/references/installation.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f88b641c2c08c8109f6a78ebf37250ab40d3e9fb
+--- /dev/null
++++ b/.opencode/skills/pwa/references/installation.md
+@@ -0,0 +1,66 @@
++# Installation
++
++## Product Identity And Icons
++
++Reuse the app's current name, description, theme, and logo. Use the `asset-workflow` skill when selecting or creating product assets. Produce real PNG icons at 192x192 and 512x512 in `public/icons/`, and a 180x180 Apple icon at `app/apple-icon.png` (Next.js links this file automatically). Keep a suitable existing Apple icon convention if the app already has one.
++
++Use an existing branding config if available. Otherwise create a small shared config only if needed to keep the manifest and metadata consistent, populated from the actual product. Do not rename an existing app to a generic template name. Regenerate raster sizes from the source artwork rather than changing only a filename or declared size. Declare `purpose: "maskable"` only for artwork designed with a safe area; ordinary icons use `"any"`.
++
++## Manifest
++
++Create or adapt `app/manifest.ts`. The example below assumes `lib/pwa-config.ts` exports the actual product identity as `pwaConfig`; adapt the import to the app's existing source of branding.
++
++```ts
++import { type MetadataRoute } from "next";
++import { pwaConfig } from "@/lib/pwa-config";
++
++export const dynamic = "force-static";
++
++export default function manifest(): MetadataRoute.Manifest {
++  return {
++    name: pwaConfig.name,
++    short_name: pwaConfig.name,
++    description: pwaConfig.description,
++    lang: "ru",
++    start_url: "./",
++    scope: "./",
++    display: "standalone",
++    theme_color: pwaConfig.themeColor,
++    background_color: pwaConfig.backgroundColor,
++    icons: [
++      {
++        src: "icons/icon-192.png",
++        sizes: "192x192",
++        type: "image/png",
++        purpose: "any",
++      },
++      {
++        src: "icons/icon-512.png",
++        sizes: "512x512",
++        type: "image/png",
++        purpose: "any",
++      },
++    ],
++  };
++}
++```
++
++Adapt `lang` and, if needed, `short_name` to the product. `force-static` is required for the static-export template. Next.js automatically emits the manifest link for this file convention; verify the built HTML before adding another link in the layout.
++
++Manifest `start_url`, `scope`, and icon paths resolve relative to the manifest URL. The relative paths above support both root and prefixed deployments. Omit `id` to use the resolved start URL by default. If an existing PWA already defines an identity, preserve it; a new explicit `id` must be a stable, origin-relative URL that includes the deployment prefix. Do not use `id: "./"` for separate apps under different prefixes on one origin.
++
++For a prefix such as `/app`, verify that `/app/` is not redirected to `/app`, outside manifest scope `/app/`. Adapt the existing `next.config.ts` to retain the trailing slash for prefixed deployments when needed, and check existing routing and links. Preserve `output: "export"` in the static template and existing proxy/asset settings.
++
++## Metadata And Installation UI
++
++Preserve the current root layout and metadata exports. If adding Apple-specific title/display settings or `applicationName`, merge them into the existing metadata. Put `themeColor` in a Next.js `Viewport` export, preserving existing viewport settings. Do not overwrite title templates, canonical URLs, Open Graph data, fonts, providers, or page chrome.
++
++An installation-only request needs no service worker, caching scripts, build-hook changes, offline fallback, or new dependency.
++
++If an in-page installation button is requested, use `beforeinstallprompt` only when the browser actually exposes it; call its prompt from a user gesture. Hide the button when already installed or no prompt is available. For iOS, show Share → Add to Home Screen instructions when useful. Do not display an always-enabled button that cannot install anything.
++
++## Official References
++
++- [Next.js PWA guide](https://nextjs.org/docs/app/guides/progressive-web-apps)
++- [Next.js manifest convention](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/manifest)
++- [MDN installation requirements and browser controls](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)
+diff --git a/.opencode/skills/pwa/references/offline.md b/.opencode/skills/pwa/references/offline.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..68a2f19608e3a3b1144b48f28fa87186e8e6b620
+--- /dev/null
++++ b/.opencode/skills/pwa/references/offline.md
+@@ -0,0 +1,59 @@
++# Offline Support
++
++Read [installation.md](installation.md) when installation is also requested. Offline caching can be added independently of installation.
++
++## Select The Mode
++
++| Deployment                         | Supplied behavior                                                                                    | Connection still needed for                                    |
++| ---------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
++| Static export (`output: "export"`) | Precache exported HTML, Next navigation payloads, and local resources after a successful online load | External APIs, uncached external resources, shared/server data |
++| Server                             | Fetch navigations from the network; show a self-contained fallback when the network fails            | Server-rendered pages, authentication, APIs, and mutations     |
++
++The server fallback does not make the full application work offline. If the user needs that, design an offline shell and data/synchronization model for the requested flows before extending caching. Preserve the template's storage constraints.
++
++## Copy And Adapt The Offline Assets
++
++After the user requests offline behavior:
++
++1. Copy `../assets/build-pwa.mjs` and `../assets/pwa-worker.js` from this skill into the project's `scripts/` directory, keeping them together. Do not overwrite an existing implementation without inspecting it.
++2. Copy `../assets/offline.html` to `public/offline.html` and adapt its text/appearance to the product. Keep it self-contained, with no remote fonts, scripts, or images.
++3. Append `node scripts/build-pwa.mjs` after the existing successful production build for server mode; use `node scripts/build-pwa.mjs --static` for static export. Preserve the current build's other steps. The generator also recognizes `OUTPUT_MODE=export`.
++4. Ignore the generated `/public/sw.js` in `.gitignore`. The static generator also writes `out/sw.js`. Keep the worker at that stable public URL; do not edit or commit generated worker contents.
++5. Add a client registration component and mount it once in an existing shared client shell or the root layout, preserving the app. Pass the configured `BASE_PATH` from server/build configuration; do not read a non-public environment variable directly in browser code.
++
++Registration can use this effect inside a client component, with `basePath` supplied as a string prop (`""` for a root deployment):
++
++```tsx
++useEffect(() => {
++  if (
++    process.env.NODE_ENV !== "production" ||
++    !window.isSecureContext ||
++    !("serviceWorker" in navigator)
++  )
++    return;
++
++  void navigator.serviceWorker
++    .register(`${basePath}/sw.js`, {
++      scope: `${basePath}/`,
++      updateViaCache: "none",
++    })
++    .catch((error: unknown) => {
++      console.error("Service worker registration failed:", error);
++    });
++}, [basePath]);
++```
++
++Use `"use client"`, import `useEffect`, and return `null` for a dedicated registration component. For prefixed deployments, verify canonical navigation remains inside `${basePath}/`; Next's redirect from `/app/` to `/app` would escape a worker scoped to `/app/`. Preserve that trailing slash where needed.
++
++## Cache And Update Contract
++
++The supplied generator derives a revision from the worker, mode, route map, and cached file contents. The worker uses `vibecraft:<registration scope URL>:<revision>` as its cache name. No future application name or template substitution parameter is needed.
++
++- Delete only older caches belonging to the same registration scope. Never delete all origin caches.
++- Let a new worker wait for the previous version's clients to close. Do not add unconditional `skipWaiting()`: old pages can otherwise fetch incompatible new assets.
++- Pass through APIs, non-GET requests, other origins, and URLs outside the scope. Do not add generic caching of every GET, authenticated pages, or server responses.
++- Static mode precaches the exported files, excluding API artifacts, hidden files, source maps, and the generated worker. Review that set before using it for a large site or one with private build-time content; narrow it when the product requires it.
++- A failed precache must fail installation and clean up only that incomplete revision. A working previous worker should remain available.
++- Keep versioned static assets available through deployment when hosting permits it. Verify an update after closing/reopening existing app clients, in addition to an offline reload after the first successful download.
++
++Do not infer success from the development server. Verify the production worker URL returns JavaScript, its scope matches the final page URL, registration/install succeeds, and the requested pages/navigation work with the network disabled. State any browser/device verification that could not be performed.
+diff --git a/.vibecraft/template.json b/.vibecraft/template.json
+index 82624d07a14c5d29eda42c09d0413bf0ddc77777..e37bf6f9ff1433922c571fb5dd3ea3c32ac66421 100644
+--- a/.vibecraft/template.json
++++ b/.vibecraft/template.json
+@@ -1,3 +1,3 @@
+ {
+-  "version": "1.0.4"
++  "version": "1.0.5"
+ }
+diff --git a/AGENTS.md b/AGENTS.md
+index 14eb50a7146db955c95d1325bb303e02bd269a72..af408e9735a794f5a074a4f88e442f2171068259 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -206,3 +206,7 @@ const d = new Date(today + "T00:00:00Z");
+ d.setUTCDate(d.getUTCDate() - 1);
+ const yesterday = d.toISOString().split("T")[0];
+ ```
++
++## PWA And Offline Support
++
++For PWA, home-screen installation, "установка сайта как приложения", or offline support, use the [pwa skill](.opencode/skills/pwa/SKILL.md).
