@@ -133,3 +133,31 @@ export async function deleteService(id: string): Promise<void> {
     })
   );
 }
+
+export interface Progress {
+  id: string;
+  completedLessons: string[];
+  completedTasks: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getProgressById(id: string): Promise<Progress | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TableName.PROGRESS,
+      Key: { id },
+    })
+  );
+  return (result.Item as Progress) ?? null;
+}
+
+export async function putProgress(progress: Progress): Promise<Progress> {
+  await docClient.send(
+    new PutCommand({
+      TableName: TableName.PROGRESS,
+      Item: progress,
+    })
+  );
+  return progress;
+}

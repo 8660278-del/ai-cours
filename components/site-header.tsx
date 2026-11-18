@@ -2,19 +2,37 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { label: "Главная", href: "/", active: true },
-  { label: "Программа курса", href: "/#modules" },
+  { label: "Главная", href: "/" },
+  { label: "Программа курса", href: "/course" },
   { label: "Библиотека промптов", href: "/#prompts" },
   { label: "Полезные материалы", href: "/#materials" },
-  { label: "Мой прогресс", href: "/#progress" },
+  { label: "Мой прогресс", href: "/progress" },
 ];
+
+function isActivePath(pathname: string, href: string) {
+  if (href === "/") {
+    return pathname === "/";
+  }
+
+  if (href.startsWith("/course")) {
+    return pathname === "/course" || pathname.startsWith("/course/");
+  }
+
+  if (href === "/progress") {
+    return pathname === "/progress";
+  }
+
+  return false;
+}
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0c0c0d] text-white">
@@ -43,7 +61,7 @@ export function SiteHeader() {
               href={item.href}
               className={cn(
                 "rounded-md px-3 py-2 text-sm transition-colors",
-                item.active
+                isActivePath(pathname, item.href)
                   ? "font-medium text-[#f36f21]"
                   : "text-white/70 hover:bg-white/5 hover:text-white"
               )}
@@ -79,7 +97,7 @@ export function SiteHeader() {
                 onClick={() => setOpen(false)}
                 className={cn(
                   "rounded-md px-3 py-3 text-sm transition-colors",
-                  item.active
+                  isActivePath(pathname, item.href)
                     ? "font-medium text-[#f36f21]"
                     : "text-white/70 hover:bg-white/5 hover:text-white"
                 )}

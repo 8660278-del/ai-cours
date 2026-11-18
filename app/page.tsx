@@ -5,43 +5,28 @@ import {
   BarChart3,
   BookOpen,
   CheckCircle2,
-  Circle,
   Clock,
+  Lock,
   Library,
   PlayCircle,
   Target,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { course, resources, type ResourceId } from "@/lib/data";
+import { courseModules } from "@/lib/course-data";
 import {
-  course,
-  currentTask,
-  modules,
-  resources,
-  type ModuleStatus,
-  type ResourceId,
-} from "@/lib/data";
+  getContinueLesson,
+  getCourseStats,
+  getModulePercent,
+  getModuleStatus,
+  isLessonCompleted,
+  isModuleUnlocked,
+} from "@/lib/progress";
+import { loadProgress } from "@/lib/progress-service";
+import { ModuleStatusBadge } from "@/components/module-status-badge";
 
-const statusMeta: Record<
-  ModuleStatus,
-  { label: string; className: string; icon: LucideIcon }
-> = {
-  completed: {
-    label: "Завершён",
-    className: "border-transparent bg-[#171717] text-white",
-    icon: CheckCircle2,
-  },
-  in_progress: {
-    label: "В процессе",
-    className: "border-black/15 bg-white text-foreground",
-    icon: PlayCircle,
-  },
-  not_started: {
-    label: "Не начат",
-    className: "border-black/10 bg-transparent text-muted-foreground",
-    icon: Circle,
-  },
-};
+export const dynamic = "force-dynamic";
 
 const resourceIcons: Record<ResourceId, LucideIcon> = {
   prompts: Library,
@@ -49,7 +34,14 @@ const resourceIcons: Record<ResourceId, LucideIcon> = {
   progress: BarChart3,
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const progress = await loadProgress();
+  const stats = getCourseStats(progress);
+  const continueRef = getContinueLesson(progress);
+  const continueHref = continueRef.allCompleted
+    ? "/progress"
+    : `/course/${continueRef.module.id}/${continueRef.lesson.id}`;
+
   return (
     <div className="bg-[#f6f5f2]">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
@@ -93,7 +85,7 @@ export default function HomePage() {
                   Общий прогресс
                 </p>
                 <p className="mt-2 text-5xl font-semibold tracking-tight text-foreground">
-                  {course.progress}
+                  {stats.percent}
                   <span className="ml-0.5 text-2xl">%</span>
                 </p>
               </div>
@@ -105,33 +97,39 @@ export default function HomePage() {
             <div
               role="progressbar"
               aria-label="Общий прогресс курса"
-              aria-valuenow={course.progress}
+              aria-valuenow={stats.percent}
               aria-valuemin={0}
               aria-valuemax={100}
               className="mt-5 h-2 w-full overflow-hidden rounded-full bg-[#e8e5df]"
             >
               <div
                 className="h-full rounded-full bg-[#f36f21]"
-                style={{ width: `${course.progress}%` }}
+                style={{ width: `${stats.percent}%` }}
               />
             </div>
             <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
               <span>
-                {course.completedModules} из {course.totalModules} модулей
+                {stats.completedModules} из {stats.totalModules} модулей
                 завершено
               </span>
-              <span>{course.totalHours}</span>
+              <span>
+                {stats.completedLessons} из {stats.totalLessons} уроков
+              </span>
             </div>
 
             <div className="mt-5 border-t border-black/10 pt-4">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Следующий шаг
+                {continueRef.allCompleted ? "Курс завершён" : "Следующий шаг"}
               </p>
               <p className="mt-2 text-sm font-medium text-foreground">
-                {currentTask.module} · {currentTask.lesson}
+                {continueRef.allCompleted
+                  ? "Все модули пройдены"
+                  : `Модуль ${continueRef.module.order} · Урок ${continueRef.lesson.numberLabel}`}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {currentTask.title}
+                {continueRef.allCompleted
+                  ? "Можно вернуться к любому уроку или посмотреть итоги."
+                  : continueRef.lesson.title}
               </p>
             </div>
           </aside>
@@ -148,25 +146,34 @@ export default function HomePage() {
               </span>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Текущая учебная задача
+                  {continueRef.allCompleted
+                    ? "Курс завершён"
+                    : "Текущая учебная задача"}
                 </p>
                 <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-                  {currentTask.title}
+                  {continueRef.allCompleted
+                    ? "Все уроки курса пройдены"
+                    : continueRef.lesson.title}
                 </h2>
                 <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  {currentTask.description}
+                  {continueRef.allCompleted
+                    ? "Вы завершили все модули. На странице прогресса собраны завершённые уроки и выполненные задания."
+                    : continueRef.lesson.goal}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {currentTask.module} · {currentTask.lesson} ·{" "}
-                  {currentTask.duration}
+                  {continueRef.allCompleted
+                    ? `${stats.completedLessons} из ${stats.totalLessons} уроков пройдено`
+                    : `Модуль ${continueRef.module.order} · Урок ${continueRef.lesson.numberLabel} · ${continueRef.lesson.duration}`}
                 </p>
               </div>
             </div>
             <Link
-              href={currentTask.href}
+              href={continueHref}
               className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#f36f21] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#d95c16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f36f21] focus-visible:ring-offset-2 lg:min-w-56"
             >
-              Продолжить обучение
+              {continueRef.allCompleted
+                ? "Посмотреть прогресс"
+                : "Продолжить обучение"}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -182,21 +189,30 @@ export default function HomePage() {
                 Пять модулей · {course.totalHours} · без видео
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Модули открываются последовательно
-            </p>
+            <Link
+              href="/course"
+              className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:underline"
+            >
+              Вся программа
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
           </div>
 
           <ul className="divide-y divide-black/10">
-            {modules.map((module, index) => {
-              const status = statusMeta[module.status];
-              const StatusIcon = status.icon;
+            {courseModules.map((module) => {
+              const status = getModuleStatus(module, progress);
+              const locked = !isModuleUnlocked(module.id, progress);
+              const completedLessons = module.lessons.filter((lesson) =>
+                isLessonCompleted(progress, lesson.id)
+              ).length;
+              const percent = getModulePercent(module, progress);
+              const previous = courseModules[module.order - 2];
 
               return (
                 <li key={module.id} className="py-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-black/10 bg-white text-sm font-semibold text-muted-foreground">
-                      {String(index + 1).padStart(2, "0")}
+                      {String(module.order).padStart(2, "0")}
                     </span>
 
                     <div className="min-w-0 flex-1">
@@ -204,19 +220,31 @@ export default function HomePage() {
                         <h3 className="text-base font-medium text-foreground">
                           {module.title}
                         </h3>
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                            status.className
-                          )}
-                        >
-                          <StatusIcon className="h-3 w-3" />
-                          {status.label}
-                        </span>
+                        <ModuleStatusBadge status={status} locked={locked} />
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {module.lessons} уроков
+                        {module.lessons.length} уроков · {completedLessons}{" "}
+                        пройдено
                       </p>
+                      {locked ? (
+                        <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Lock className="h-3 w-3" />
+                          Откроется после завершения модуля {previous.order} «
+                          {previous.title}»
+                        </p>
+                      ) : (
+                        <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-[#e8e5df]">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              status === "completed"
+                                ? "bg-[#171717]"
+                                : "bg-[#f36f21]"
+                            )}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between gap-4 sm:justify-end">
@@ -225,14 +253,16 @@ export default function HomePage() {
                         {module.duration}
                       </span>
                       <Link
-                        href={module.href}
+                        href={`/course/${module.id}`}
                         className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:underline"
                       >
-                        {module.status === "completed"
-                          ? "Повторить"
-                          : module.status === "in_progress"
-                            ? "Продолжить"
-                            : "Открыть"}
+                        {locked
+                          ? "Почему закрыт"
+                          : status === "completed"
+                            ? "Повторить"
+                            : status === "in_progress"
+                              ? "Продолжить"
+                              : "Открыть"}
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     </div>
@@ -276,6 +306,17 @@ export default function HomePage() {
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                     {resource.description}
                   </p>
+                  {resource.id === "progress" ? (
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-[#f36f21]" />
+                      {stats.percent}% пройдено
+                    </span>
+                  ) : (
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                      <PlayCircle className="h-3.5 w-3.5" />
+                      Доступно сейчас
+                    </span>
+                  )}
                 </Link>
               );
             })}

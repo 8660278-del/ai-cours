@@ -6,6 +6,7 @@ import {
 
 export const TableName = {
   SERVICES: "services",
+  PROGRESS: "progress",
 } as const;
 
 export type TableName = (typeof TableName)[keyof typeof TableName];
@@ -32,6 +33,11 @@ export const TABLE_SCHEMAS: Record<TableName, TableSchema> = {
         Projection: { ProjectionType: "ALL" },
       },
     ],
+  },
+  [TableName.PROGRESS]: {
+    name: TableName.PROGRESS,
+    keySchema: [{ AttributeName: "id", KeyType: "HASH" }],
+    attributeDefinitions: [{ AttributeName: "id", AttributeType: "S" }],
   },
 };
 
