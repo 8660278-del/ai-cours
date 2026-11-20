@@ -45,7 +45,9 @@ import {
 } from "@/components/lesson3-interactive";
 import {
   IdeaPractice,
+  ImagePromptPractice,
   PresentationPractice,
+  PresentationReviewPractice,
   VisualizationPractice,
 } from "@/components/lesson4-interactive";
 import { cn } from "@/lib/utils";
@@ -889,6 +891,14 @@ export function LessonInteractive({
 
   if (interactiveId === "visualization-choice-practice") {
     return <VisualizationPractice />;
+  }
+
+  if (interactiveId === "image-prompt-practice") {
+    return <ImagePromptPractice />;
+  }
+
+  if (interactiveId === "presentation-review-practice") {
+    return <PresentationReviewPractice />;
   }
 
   return (
