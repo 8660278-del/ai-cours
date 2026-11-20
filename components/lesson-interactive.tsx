@@ -26,6 +26,10 @@ import {
   type ToolId,
 } from "@/lib/module1-interactive-data";
 import { Button } from "@/components/ui/button";
+import {
+  DocumentPractice,
+  LetterPractice,
+} from "@/components/lesson2-interactive";
 import { cn } from "@/lib/utils";
 
 function ResetButton({
@@ -811,6 +815,14 @@ export function LessonInteractive({
 
   if (interactiveId === "follow-up") {
     return <FollowUp />;
+  }
+
+  if (interactiveId === "letter-practice") {
+    return <LetterPractice />;
+  }
+
+  if (interactiveId === "document-practice") {
+    return <DocumentPractice />;
   }
 
   return (
