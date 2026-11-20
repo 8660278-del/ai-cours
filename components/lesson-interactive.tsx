@@ -43,6 +43,11 @@ import {
   SpreadsheetAuditPractice,
   TextAnalysisPractice,
 } from "@/components/lesson3-interactive";
+import {
+  IdeaPractice,
+  PresentationPractice,
+  VisualizationPractice,
+} from "@/components/lesson4-interactive";
 import { cn } from "@/lib/utils";
 
 function ResetButton({
@@ -872,6 +877,18 @@ export function LessonInteractive({
 
   if (interactiveId === "analytical-review-practice") {
     return <AnalyticalReviewPractice />;
+  }
+
+  if (interactiveId === "idea-generation-practice") {
+    return <IdeaPractice />;
+  }
+
+  if (interactiveId === "presentation-structure-practice") {
+    return <PresentationPractice />;
+  }
+
+  if (interactiveId === "visualization-choice-practice") {
+    return <VisualizationPractice />;
   }
 
   return (
