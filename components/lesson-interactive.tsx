@@ -36,7 +36,10 @@ import {
   ReviewPractice,
 } from "@/components/lesson2-advanced-interactive";
 import {
+  AnalyticalReviewPractice,
   ExtractTablePractice,
+  IndicatorConclusionsPractice,
+  SourceVerificationPractice,
   SpreadsheetAuditPractice,
   TextAnalysisPractice,
 } from "@/components/lesson3-interactive";
@@ -857,6 +860,18 @@ export function LessonInteractive({
 
   if (interactiveId === "spreadsheet-audit-practice") {
     return <SpreadsheetAuditPractice />;
+  }
+
+  if (interactiveId === "indicator-conclusions-practice") {
+    return <IndicatorConclusionsPractice />;
+  }
+
+  if (interactiveId === "source-verification-practice") {
+    return <SourceVerificationPractice />;
+  }
+
+  if (interactiveId === "analytical-review-practice") {
+    return <AnalyticalReviewPractice />;
   }
 
   return (
