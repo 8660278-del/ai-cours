@@ -17,7 +17,7 @@ import {
   type DataSafetyQuestion,
 } from "@/lib/module2-interactive-data";
 
-function DataSafety({ question }: { question: DataSafetyQuestion }) {
+export function DataSafety({ question }: { question: DataSafetyQuestion }) {
   const [selected, setSelected] = useState<string | null>(null);
   const selectedOption = question.options.find(
     (option) => option.id === selected

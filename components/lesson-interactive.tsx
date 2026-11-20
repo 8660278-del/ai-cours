@@ -30,6 +30,11 @@ import {
   DocumentPractice,
   LetterPractice,
 } from "@/components/lesson2-interactive";
+import {
+  ComparePractice,
+  ProtocolPractice,
+  ReviewPractice,
+} from "@/components/lesson2-advanced-interactive";
 import { cn } from "@/lib/utils";
 
 function ResetButton({
@@ -823,6 +828,18 @@ export function LessonInteractive({
 
   if (interactiveId === "document-practice") {
     return <DocumentPractice />;
+  }
+
+  if (interactiveId === "protocol-practice") {
+    return <ProtocolPractice />;
+  }
+
+  if (interactiveId === "compare-practice") {
+    return <ComparePractice />;
+  }
+
+  if (interactiveId === "review-practice") {
+    return <ReviewPractice />;
   }
 
   return (
