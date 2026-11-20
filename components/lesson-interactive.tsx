@@ -35,6 +35,11 @@ import {
   ProtocolPractice,
   ReviewPractice,
 } from "@/components/lesson2-advanced-interactive";
+import {
+  ExtractTablePractice,
+  SpreadsheetAuditPractice,
+  TextAnalysisPractice,
+} from "@/components/lesson3-interactive";
 import { cn } from "@/lib/utils";
 
 function ResetButton({
@@ -840,6 +845,18 @@ export function LessonInteractive({
 
   if (interactiveId === "review-practice") {
     return <ReviewPractice />;
+  }
+
+  if (interactiveId === "text-analysis-practice") {
+    return <TextAnalysisPractice />;
+  }
+
+  if (interactiveId === "extract-table-practice") {
+    return <ExtractTablePractice />;
+  }
+
+  if (interactiveId === "spreadsheet-audit-practice") {
+    return <SpreadsheetAuditPractice />;
   }
 
   return (
