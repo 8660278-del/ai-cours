@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { BridgeProvider } from "@/components/bridge-provider";
+import { PwaRegister } from "@/components/pwa-register";
 import { SiteHeader } from "@/components/site-header";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -14,6 +15,16 @@ export const metadata: Metadata = {
   title: `${appName} — Нейросети для работы`,
   description:
     "Учебный курс ГК ПИР: как применять нейросети в ежедневной работе и повышать продуктивность.",
+  applicationName: appName,
+  appleWebApp: {
+    capable: true,
+    title: appName,
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0c0c0d",
 };
 
 export default function RootLayout({
@@ -25,6 +36,7 @@ export default function RootLayout({
     <html lang="ru" className={cn("font-sans", geist.variable)}>
       <body className="antialiased min-h-screen bg-background flex flex-col">
         <BridgeProvider />
+        <PwaRegister basePath={process.env.BASE_PATH ?? ""} />
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <footer className="border-t border-black/10 bg-[#f6f5f2]">
