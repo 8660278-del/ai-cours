@@ -167,6 +167,7 @@ export interface PersonalPrompt {
   learnerId: string;
   title: string;
   purpose: string;
+  situation?: string;
   category: string;
   requiredInputs: string[];
   variables: string[];
@@ -174,6 +175,7 @@ export interface PersonalPrompt {
   constraints: string[];
   outputRequirements: string[];
   checks: string[];
+  exampleOutput?: string;
   source: "lesson" | "library";
   createdAt: string;
   updatedAt: string;
@@ -226,6 +228,72 @@ export async function deletePersonalPrompt(id: string): Promise<void> {
     new DeleteCommand({
       TableName: TableName.PERSONAL_PROMPTS,
       Key: { id },
+    })
+  );
+}
+
+export interface FavoritePrompt {
+  id: string;
+  learnerId: string;
+  promptId: string;
+  createdAt: string;
+}
+
+function favoritePromptId(learnerId: string, promptId: string): string {
+  return `${learnerId}#${promptId}`;
+}
+
+export async function getFavoritePromptsByLearner(
+  learnerId: string
+): Promise<FavoritePrompt[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TableName.FAVORITE_PROMPTS,
+      IndexName: IndexName.FAVORITE_PROMPTS_LEARNER,
+      KeyConditionExpression: "#learnerId = :learnerId",
+      ExpressionAttributeNames: {
+        "#learnerId": "learnerId",
+      },
+      ExpressionAttributeValues: {
+        ":learnerId": learnerId,
+      },
+    })
+  );
+
+  const favorites = (result.Items as FavoritePrompt[]) ?? [];
+
+  return favorites.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function addFavoritePrompt(
+  learnerId: string,
+  promptId: string
+): Promise<FavoritePrompt> {
+  const favorite: FavoritePrompt = {
+    id: favoritePromptId(learnerId, promptId),
+    learnerId,
+    promptId,
+    createdAt: new Date().toISOString(),
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TableName.FAVORITE_PROMPTS,
+      Item: favorite,
+    })
+  );
+
+  return favorite;
+}
+
+export async function removeFavoritePrompt(
+  learnerId: string,
+  promptId: string
+): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TableName.FAVORITE_PROMPTS,
+      Key: { id: favoritePromptId(learnerId, promptId) },
     })
   );
 }

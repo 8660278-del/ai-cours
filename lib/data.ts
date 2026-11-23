@@ -29,7 +29,7 @@ export const resources: ResourceLink[] = [
     title: "Библиотека промптов",
     description:
       "Готовые формулировки для писем, документов, таблиц и презентаций.",
-    href: "/#prompts",
+    href: "/library",
   },
   {
     id: "materials",

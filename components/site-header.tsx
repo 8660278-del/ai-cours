@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { label: "Главная", href: "/" },
   { label: "Программа курса", href: "/course" },
-  { label: "Библиотека промптов", href: "/#prompts" },
+  { label: "Библиотека промптов", href: "/library" },
   { label: "Полезные материалы", href: "/#materials" },
   { label: "Мой прогресс", href: "/progress" },
 ];
@@ -25,6 +25,10 @@ function isActivePath(pathname: string, href: string) {
 
   if (href === "/progress") {
     return pathname === "/progress";
+  }
+
+  if (href === "/library") {
+    return pathname === "/library" || pathname.startsWith("/library/");
   }
 
   return false;
