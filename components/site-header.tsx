@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -55,13 +56,14 @@ export function SiteHeader() {
           className="flex shrink-0 items-center gap-2.5"
           aria-label="ГК ПИР — на главную"
         >
-          <span
-            className="h-5 w-1 rounded-full bg-[#f36f21]"
-            aria-hidden="true"
+          <Image
+            src="/assets/pir-logo-web.png"
+            alt="ГК ПИР"
+            width={841}
+            height={841}
+            priority
+            className="h-9 w-9 object-contain sm:h-10 sm:w-10"
           />
-          <span className="text-base font-bold uppercase tracking-[0.16em] sm:text-lg">
-            ГК ПИР
-          </span>
         </Link>
 
         <nav
