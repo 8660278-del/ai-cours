@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock,
+  ShieldCheck,
   Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,14 @@ export default async function ProgressPage() {
   const completedModules = courseModules.filter((module) =>
     isModuleCompleted(module, progress)
   );
+  const securityTrainer = progress.securityTrainer ?? null;
+  const securityTrainerAnswered = securityTrainer
+    ? Object.keys(securityTrainer.answers ?? {}).length
+    : 0;
+  const securityTrainerPercent =
+    securityTrainer && securityTrainer.total > 0
+      ? Math.round((securityTrainer.correct / securityTrainer.total) * 100)
+      : 0;
 
   return (
     <div className="bg-[#f6f5f2]">
@@ -121,6 +130,71 @@ export default async function ProgressPage() {
               </dd>
             </div>
           </dl>
+        </section>
+
+        <section
+          aria-label="Тренажёр по информационной безопасности"
+          className="mt-6 rounded-xl border border-black/10 bg-white p-5 sm:p-6"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#fff7f1] text-[#c8560f]">
+                <ShieldCheck className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                  Тренажёр по информационной безопасности
+                </h2>
+                {securityTrainer ? (
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Правильно {securityTrainer.correct} из{" "}
+                    {securityTrainer.total}. Разобрано {securityTrainerAnswered}{" "}
+                    из {securityTrainer.total} ситуаций.
+                    {securityTrainer.completedAt && (
+                      <>
+                        {" "}
+                        Сохранено{" "}
+                        {new Intl.DateTimeFormat("ru-RU", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        }).format(new Date(securityTrainer.completedAt))}
+                        .
+                      </>
+                    )}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Результат пока не сохранён. Пройдите шесть ситуаций, чтобы
+                    увидеть итог здесь.
+                  </p>
+                )}
+              </div>
+            </div>
+            <Link
+              href="/security"
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-foreground hover:underline"
+            >
+              {securityTrainer ? "Пройти снова" : "Открыть тренажёр"}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          {securityTrainer && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Результат тренажёра</span>
+                <span>{securityTrainerPercent}%</span>
+              </div>
+              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[#e8e5df]">
+                <div
+                  className="h-full rounded-full bg-[#f36f21] transition-all"
+                  style={{ width: `${securityTrainerPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         {stats.completedLessons === 0 ? (

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   ArrowRightLeft,
   BookOpen,
@@ -6,6 +7,7 @@ import {
   FileText,
   Lightbulb,
   ListChecks,
+  ShieldCheck,
   Target,
   XCircle,
 } from "lucide-react";
@@ -416,6 +418,20 @@ export function LessonBlocks({
                 <p className="text-[15px] leading-7 text-foreground/80">
                   {block.description}
                 </p>
+
+                <div className="mt-4 flex flex-col gap-2 rounded-lg border border-[#f36f21]/25 bg-[#fff7f1] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="flex items-start gap-2 text-sm leading-6 text-foreground/80">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#c8560f]" />
+                    Проверьте, можно ли передавать данные задания в ИИ: уровень
+                    данных, разрешённый сервис и минимальный объём.
+                  </p>
+                  <Link
+                    href="/security"
+                    className="shrink-0 text-sm font-medium text-[#c8560f] hover:underline"
+                  >
+                    Раздел безопасности
+                  </Link>
+                </div>
 
                 {block.condition && (
                   <div className="mt-4 rounded-lg border border-black/10 bg-[#f9f8f5] p-4">

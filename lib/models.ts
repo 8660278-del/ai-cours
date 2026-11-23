@@ -8,6 +8,7 @@ import {
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { TableName, IndexName } from "./schema";
+import type { SecurityTrainerResult } from "./security-data";
 
 export interface Service {
   id: string;
@@ -138,6 +139,7 @@ export interface Progress {
   id: string;
   completedLessons: string[];
   completedTasks: string[];
+  securityTrainer?: SecurityTrainerResult;
   createdAt: string;
   updatedAt: string;
 }

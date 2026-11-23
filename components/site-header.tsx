@@ -10,6 +10,7 @@ const navItems = [
   { label: "Главная", href: "/" },
   { label: "Программа курса", href: "/course" },
   { label: "Библиотека промптов", href: "/library" },
+  { label: "Безопасность", href: "/security" },
   { label: "Полезные материалы", href: "/#materials" },
   { label: "Мой прогресс", href: "/progress" },
 ];
@@ -29,6 +30,10 @@ function isActivePath(pathname: string, href: string) {
 
   if (href === "/library") {
     return pathname === "/library" || pathname.startsWith("/library/");
+  }
+
+  if (href === "/security") {
+    return pathname === "/security";
   }
 
   return false;
