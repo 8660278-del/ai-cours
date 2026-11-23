@@ -51,6 +51,9 @@ import {
   VisualizationPractice,
 } from "@/components/lesson4-interactive";
 import {
+  AutomationLevelPractice,
+  EffectMeasurementPractice,
+  MistakeScenarioPractice,
   ProcessDecompositionPractice,
   TaskDiscoveryPractice,
   TemplateBuilderPractice,
@@ -916,6 +919,18 @@ export function LessonInteractive({
 
   if (interactiveId === "template-builder-practice") {
     return <TemplateBuilderPractice />;
+  }
+
+  if (interactiveId === "automation-level-practice") {
+    return <AutomationLevelPractice />;
+  }
+
+  if (interactiveId === "effect-measurement-practice") {
+    return <EffectMeasurementPractice />;
+  }
+
+  if (interactiveId === "mistake-scenario-practice") {
+    return <MistakeScenarioPractice />;
   }
 
   return (

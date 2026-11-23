@@ -26,6 +26,15 @@ import {
   aiFitLabels,
   aiRoleLabels,
   approvalLabels,
+  automationLevelLabels,
+  automationLevelReference,
+  automationLevelScenarios,
+  effectCases,
+  effectFormula,
+  effectReference,
+  implementationMistakeLabels,
+  mistakeReference,
+  mistakeScenarios,
   processDecompositionExample,
   processStageFields,
   taskDiscoveryExamples,
@@ -35,6 +44,8 @@ import {
   type AiFit,
   type AiRole,
   type Approval,
+  type AutomationLevel,
+  type ImplementationMistake,
 } from "@/lib/module5-interactive-data";
 
 function ResetButton({
@@ -1328,6 +1339,761 @@ export function TemplateBuilderPractice() {
               {templateExample.checks.join("; ")}
             </p>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface LevelScenarioDraft {
+  level: AutomationLevel | "";
+  improvement: string;
+}
+
+function createEmptyLevelDrafts(): Record<string, LevelScenarioDraft> {
+  return automationLevelScenarios.reduce<Record<string, LevelScenarioDraft>>(
+    (acc, scenario) => {
+      acc[scenario.id] = { level: "", improvement: "" };
+      return acc;
+    },
+    {}
+  );
+}
+
+const MIN_TEXT_LENGTH = 15;
+
+export function AutomationLevelPractice() {
+  const [drafts, setDrafts] = useState<Record<string, LevelScenarioDraft>>(
+    createEmptyLevelDrafts
+  );
+  const [checked, setChecked] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
+
+  const total = automationLevelScenarios.length;
+  const filled = automationLevelScenarios.filter((scenario) => {
+    const draft = drafts[scenario.id];
+    return (
+      draft.level !== "" && draft.improvement.trim().length >= MIN_TEXT_LENGTH
+    );
+  }).length;
+  const ready = filled === total;
+
+  const updateDraft = (
+    id: string,
+    patch: Partial<LevelScenarioDraft>
+  ): void => {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], ...patch },
+    }));
+  };
+
+  const reset = () => {
+    setDrafts(createEmptyLevelDrafts());
+    setChecked(false);
+    setReferenceOpen(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm leading-6 text-muted-foreground">
+          Для каждой ситуации определите уровень применения ИИ и предложите, как
+          улучшить процесс.
+        </p>
+        <ResetButton onClick={reset} />
+      </div>
+
+      <ProgressLine
+        answered={filled}
+        total={total}
+        extra="уровень + улучшение"
+      />
+
+      <div className="space-y-3">
+        {automationLevelScenarios.map((scenario, index) => {
+          const draft = drafts[scenario.id];
+          const levelCorrect = draft.level === scenario.correctLevel;
+          const improvementFilled =
+            draft.improvement.trim().length >= MIN_TEXT_LENGTH;
+
+          return (
+            <div
+              key={scenario.id}
+              className={cn(
+                "rounded-xl border bg-white p-4 sm:p-5",
+                checked
+                  ? levelCorrect && improvementFilled
+                    ? "border-emerald-200"
+                    : "border-amber-200"
+                  : "border-black/10"
+              )}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Ситуация {index + 1} · {scenario.direction}
+                </p>
+                {checked && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 text-xs font-medium",
+                      levelCorrect && improvementFilled
+                        ? "text-emerald-700"
+                        : "text-amber-700"
+                    )}
+                  >
+                    {levelCorrect && improvementFilled ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                    )}
+                    {levelCorrect && improvementFilled
+                      ? "разобрано"
+                      : "нужно доработать"}
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-2 text-sm font-medium text-foreground">
+                {scenario.task}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {scenario.current}
+              </p>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <FieldLabel
+                    label="Уровень применения ИИ"
+                    hint="Выберите текущий уровень задачи."
+                  />
+                  <select
+                    value={draft.level}
+                    onChange={(event) =>
+                      updateDraft(scenario.id, {
+                        level: event.target.value as AutomationLevel | "",
+                      })
+                    }
+                    className={selectClassName}
+                  >
+                    <option value="">Выберите уровень</option>
+                    {(
+                      Object.keys(automationLevelLabels) as AutomationLevel[]
+                    ).map((value) => (
+                      <option key={value} value={value}>
+                        {automationLevelLabels[value]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <FieldLabel
+                    label="Способ улучшения"
+                    hint="Что сделать, чтобы поднять задачу на следующий уровень?"
+                  />
+                  <textarea
+                    value={draft.improvement}
+                    onChange={(event) =>
+                      updateDraft(scenario.id, {
+                        improvement: event.target.value,
+                      })
+                    }
+                    placeholder="Например: оформить шаблон с обязательными данными, ограничениями и списком проверок"
+                    rows={3}
+                    className={inputClassName}
+                  />
+                </label>
+              </div>
+
+              {checked && (
+                <div className="mt-3 rounded-lg border border-black/10 bg-[#f9f8f5] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Верный уровень:{" "}
+                    {automationLevelLabels[scenario.correctLevel]}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-foreground/80">
+                    {scenario.explanation}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-emerald-900/85">
+                    <span className="font-medium">Ориентир улучшения:</span>{" "}
+                    {scenario.improvement}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          onClick={() => setChecked(true)}
+          className="bg-[#171717] text-white hover:bg-black"
+        >
+          <ClipboardList className="h-4 w-4" />
+          Проверить уровни
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setReferenceOpen((prev) => !prev)}
+          className="h-9 border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+        >
+          <Lightbulb className="h-4 w-4 text-emerald-600" />
+          {referenceOpen ? "Скрыть эталон" : "Показать эталон"}
+        </Button>
+      </div>
+
+      {checked && (
+        <div
+          className={cn(
+            "flex items-start gap-2.5 rounded-lg border p-4",
+            ready
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
+          )}
+        >
+          {ready ? (
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          ) : (
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          )}
+          <p
+            className={cn(
+              "text-sm leading-6",
+              ready ? "text-emerald-900" : "text-amber-900"
+            )}
+          >
+            {ready
+              ? "Все ситуации разобраны: уровень определён, способ улучшения сформулирован."
+              : `Заполнено ${filled} из ${total}. Для каждой ситуации выберите уровень и опишите способ улучшения.`}
+          </p>
+        </div>
+      )}
+
+      {referenceOpen && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-sm font-semibold text-emerald-900">
+            Эталон: как выбирать уровень
+          </p>
+          <ul className="mt-3 space-y-2">
+            {automationLevelReference.map((item) => (
+              <li
+                key={item}
+                className="flex gap-2 text-sm leading-6 text-emerald-900/85"
+              >
+                <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface EffectCaseDraft {
+  saving: string;
+  explanation: string;
+}
+
+function createEmptyEffectDrafts(): Record<string, EffectCaseDraft> {
+  return effectCases.reduce<Record<string, EffectCaseDraft>>((acc, item) => {
+    acc[item.id] = { saving: "", explanation: "" };
+    return acc;
+  }, {});
+}
+
+function parseMinutes(value: string): number | null {
+  const normalized = value.trim().replace(",", ".");
+  if (normalized.length === 0) {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function EffectMeasurementPractice() {
+  const [drafts, setDrafts] = useState<Record<string, EffectCaseDraft>>(
+    createEmptyEffectDrafts
+  );
+  const [checked, setChecked] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
+
+  const total = effectCases.length;
+  const filled = effectCases.filter((item) => {
+    const draft = drafts[item.id];
+    return (
+      draft.saving.trim().length > 0 &&
+      draft.explanation.trim().length >= MIN_TEXT_LENGTH
+    );
+  }).length;
+  const ready = filled === total;
+
+  const expectedSaving = (item: (typeof effectCases)[number]): number =>
+    item.baseMinutes - (item.prepMinutes + item.checkMinutes + item.fixMinutes);
+
+  const updateDraft = (id: string, patch: Partial<EffectCaseDraft>): void => {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], ...patch },
+    }));
+  };
+
+  const reset = () => {
+    setDrafts(createEmptyEffectDrafts());
+    setChecked(false);
+    setReferenceOpen(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm leading-6 text-muted-foreground">
+          Посчитайте экономию по формуле и объясните результат с учётом
+          качества.
+        </p>
+        <ResetButton onClick={reset} />
+      </div>
+
+      <div className="rounded-lg border border-black/10 bg-[#f9f8f5] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Формула
+        </p>
+        <p className="mt-1 text-sm leading-6 text-foreground">
+          {effectFormula}
+        </p>
+      </div>
+
+      <ProgressLine
+        answered={filled}
+        total={total}
+        extra="расчёт + объяснение"
+      />
+
+      <div className="space-y-3">
+        {effectCases.map((item, index) => {
+          const draft = drafts[item.id];
+          const expected = expectedSaving(item);
+          const parsed = parseMinutes(draft.saving);
+          const savingCorrect =
+            parsed !== null && Math.abs(parsed - expected) < 0.01;
+          const explanationFilled =
+            draft.explanation.trim().length >= MIN_TEXT_LENGTH;
+
+          return (
+            <div
+              key={item.id}
+              className={cn(
+                "rounded-xl border bg-white p-4 sm:p-5",
+                checked
+                  ? savingCorrect && explanationFilled
+                    ? "border-emerald-200"
+                    : "border-amber-200"
+                  : "border-black/10"
+              )}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Пример {index + 1} · {item.direction}
+                </p>
+                {checked && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 text-xs font-medium",
+                      savingCorrect && explanationFilled
+                        ? "text-emerald-700"
+                        : "text-amber-700"
+                    )}
+                  >
+                    {savingCorrect && explanationFilled ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                    )}
+                    {savingCorrect && explanationFilled
+                      ? "верно"
+                      : "проверьте расчёт"}
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-2 text-sm font-medium text-foreground">
+                {item.title}
+              </p>
+
+              <div className="mt-2 grid gap-2 rounded-lg border border-black/10 bg-[#f9f8f5] p-3 text-xs leading-5 text-muted-foreground sm:grid-cols-2">
+                <span>Исходное время: {item.baseMinutes} мин</span>
+                <span>Подготовка данных и запроса: {item.prepMinutes} мин</span>
+                <span>Проверка: {item.checkMinutes} мин</span>
+                <span>Исправления: {item.fixMinutes} мин</span>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <FieldLabel
+                    label="Экономия времени, минут"
+                    hint="Подставьте значения в формулу и введите результат."
+                  />
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={draft.saving}
+                    onChange={(event) =>
+                      updateDraft(item.id, { saving: event.target.value })
+                    }
+                    placeholder="Например: 35"
+                    className={inputClassName}
+                  />
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <FieldLabel
+                    label="Объяснение результата"
+                    hint="Опишите, за счёт чего получена экономия и что с качеством."
+                  />
+                  <textarea
+                    value={draft.explanation}
+                    onChange={(event) =>
+                      updateDraft(item.id, { explanation: event.target.value })
+                    }
+                    placeholder="Например: экономия 35 минут, при этом данные сверены, а выводы согласованы с руководителем"
+                    rows={3}
+                    className={inputClassName}
+                  />
+                </label>
+              </div>
+
+              {checked && (
+                <div className="mt-3 rounded-lg border border-black/10 bg-[#f9f8f5] p-3">
+                  <p className="text-sm leading-6 text-foreground">
+                    <span className="font-medium">Расчёт:</span>{" "}
+                    {item.baseMinutes} − ({item.prepMinutes} +{" "}
+                    {item.checkMinutes} + {item.fixMinutes}) = {expected} минут.
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {item.conclusion}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Качество: {item.qualityNotes}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          onClick={() => setChecked(true)}
+          className="bg-[#171717] text-white hover:bg-black"
+        >
+          <ClipboardList className="h-4 w-4" />
+          Проверить расчёты
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setReferenceOpen((prev) => !prev)}
+          className="h-9 border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+        >
+          <Lightbulb className="h-4 w-4 text-emerald-600" />
+          {referenceOpen ? "Скрыть эталон" : "Показать эталон"}
+        </Button>
+      </div>
+
+      {checked && (
+        <div
+          className={cn(
+            "flex items-start gap-2.5 rounded-lg border p-4",
+            ready
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
+          )}
+        >
+          {ready ? (
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          ) : (
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          )}
+          <p
+            className={cn(
+              "text-sm leading-6",
+              ready ? "text-emerald-900" : "text-amber-900"
+            )}
+          >
+            {ready
+              ? "Все расчёты и объяснения заполнены. Обратите внимание: в последнем примере экономия отрицательная — это нормальный результат замера."
+              : `Заполнено ${filled} из ${total}. Введите расчёт экономии и объясните результат для каждого примера.`}
+          </p>
+        </div>
+      )}
+
+      {referenceOpen && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-sm font-semibold text-emerald-900">
+            Эталон: как считать и объяснять эффект
+          </p>
+          <ul className="mt-3 space-y-2">
+            {effectReference.map((item) => (
+              <li
+                key={item}
+                className="flex gap-2 text-sm leading-6 text-emerald-900/85"
+              >
+                <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface MistakeScenarioDraft {
+  mistake: ImplementationMistake | "";
+  action: string;
+}
+
+function createEmptyMistakeDrafts(): Record<string, MistakeScenarioDraft> {
+  return mistakeScenarios.reduce<Record<string, MistakeScenarioDraft>>(
+    (acc, scenario) => {
+      acc[scenario.id] = { mistake: "", action: "" };
+      return acc;
+    },
+    {}
+  );
+}
+
+export function MistakeScenarioPractice() {
+  const [drafts, setDrafts] = useState<Record<string, MistakeScenarioDraft>>(
+    createEmptyMistakeDrafts
+  );
+  const [checked, setChecked] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
+
+  const total = mistakeScenarios.length;
+  const filled = mistakeScenarios.filter((scenario) => {
+    const draft = drafts[scenario.id];
+    return (
+      draft.mistake !== "" && draft.action.trim().length >= MIN_TEXT_LENGTH
+    );
+  }).length;
+  const ready = filled === total;
+
+  const updateDraft = (
+    id: string,
+    patch: Partial<MistakeScenarioDraft>
+  ): void => {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], ...patch },
+    }));
+  };
+
+  const reset = () => {
+    setDrafts(createEmptyMistakeDrafts());
+    setChecked(false);
+    setReferenceOpen(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm leading-6 text-muted-foreground">
+          Для каждой ситуации определите тип ошибки и предложите корректный
+          способ действий.
+        </p>
+        <ResetButton onClick={reset} />
+      </div>
+
+      <ProgressLine answered={filled} total={total} extra="ошибка + действие" />
+
+      <div className="space-y-3">
+        {mistakeScenarios.map((scenario, index) => {
+          const draft = drafts[scenario.id];
+          const mistakeCorrect = draft.mistake === scenario.correctMistake;
+          const actionFilled = draft.action.trim().length >= MIN_TEXT_LENGTH;
+
+          return (
+            <div
+              key={scenario.id}
+              className={cn(
+                "rounded-xl border bg-white p-4 sm:p-5",
+                checked
+                  ? mistakeCorrect && actionFilled
+                    ? "border-emerald-200"
+                    : "border-amber-200"
+                  : "border-black/10"
+              )}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Ситуация {index + 1} · {scenario.direction}
+                </p>
+                {checked && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 text-xs font-medium",
+                      mistakeCorrect && actionFilled
+                        ? "text-emerald-700"
+                        : "text-amber-700"
+                    )}
+                  >
+                    {mistakeCorrect && actionFilled ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                    )}
+                    {mistakeCorrect && actionFilled
+                      ? "разобрано"
+                      : "нужно доработать"}
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-2 text-sm leading-6 text-foreground">
+                {scenario.situation}
+              </p>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <FieldLabel
+                    label="Тип ошибки"
+                    hint="Какая ошибка внедрения проявилась в ситуации?"
+                  />
+                  <select
+                    value={draft.mistake}
+                    onChange={(event) =>
+                      updateDraft(scenario.id, {
+                        mistake: event.target.value as
+                          ImplementationMistake | "",
+                      })
+                    }
+                    className={selectClassName}
+                  >
+                    <option value="">Выберите ошибку</option>
+                    {(
+                      Object.keys(
+                        implementationMistakeLabels
+                      ) as ImplementationMistake[]
+                    ).map((value) => (
+                      <option key={value} value={value}>
+                        {implementationMistakeLabels[value]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <FieldLabel
+                    label="Корректный способ действий"
+                    hint="Что нужно сделать, чтобы исправить ошибку?"
+                  />
+                  <textarea
+                    value={draft.action}
+                    onChange={(event) =>
+                      updateDraft(scenario.id, { action: event.target.value })
+                    }
+                    placeholder="Например: уточнить аудиторию, цель, формат и критерии качества до повторного запроса"
+                    rows={3}
+                    className={inputClassName}
+                  />
+                </label>
+              </div>
+
+              {checked && (
+                <div className="mt-3 rounded-lg border border-black/10 bg-[#f9f8f5] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Верная ошибка:{" "}
+                    {implementationMistakeLabels[scenario.correctMistake]}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-foreground/80">
+                    {scenario.explanation}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-emerald-900/85">
+                    <span className="font-medium">Корректное действие:</span>{" "}
+                    {scenario.correctAction}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          onClick={() => setChecked(true)}
+          className="bg-[#171717] text-white hover:bg-black"
+        >
+          <ClipboardList className="h-4 w-4" />
+          Проверить ситуации
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setReferenceOpen((prev) => !prev)}
+          className="h-9 border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+        >
+          <Lightbulb className="h-4 w-4 text-emerald-600" />
+          {referenceOpen ? "Скрыть эталон" : "Показать эталон"}
+        </Button>
+      </div>
+
+      {checked && (
+        <div
+          className={cn(
+            "flex items-start gap-2.5 rounded-lg border p-4",
+            ready
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
+          )}
+        >
+          {ready ? (
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          ) : (
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          )}
+          <p
+            className={cn(
+              "text-sm leading-6",
+              ready ? "text-emerald-900" : "text-amber-900"
+            )}
+          >
+            {ready
+              ? "Все шесть ситуаций разобраны: ошибка определена, корректное действие сформулировано."
+              : `Заполнено ${filled} из ${total}. Выберите тип ошибки и опишите корректное действие для каждой ситуации.`}
+          </p>
+        </div>
+      )}
+
+      {referenceOpen && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-sm font-semibold text-emerald-900">
+            Эталон: как исправлять типовые ошибки
+          </p>
+          <ul className="mt-3 space-y-2">
+            {mistakeReference.map((item) => (
+              <li
+                key={item}
+                className="flex gap-2 text-sm leading-6 text-emerald-900/85"
+              >
+                <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
