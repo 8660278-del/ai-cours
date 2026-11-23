@@ -50,8 +50,43 @@ export default async function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Курс · ГК ПИР
             </p>
-            <p className="mt-4 text-sm font-medium text-foreground">
-              Здравствуйте, {course.userName}!
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              Данное обучение подготовленно с помощью нейросетей и ИИ агентов:{" "}
+              <a
+                href="https://chatgpt.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline decoration-black/20 underline-offset-4 transition-colors hover:text-[#f36f21]"
+              >
+                ChatGPT
+              </a>
+              ,{" "}
+              <a
+                href="https://gemini.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline decoration-black/20 underline-offset-4 transition-colors hover:text-[#f36f21]"
+              >
+                Gemini
+              </a>
+              ,{" "}
+              <a
+                href="https://notebooklm.google.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline decoration-black/20 underline-offset-4 transition-colors hover:text-[#f36f21]"
+              >
+                NotebookLM
+              </a>
+              ,{" "}
+              <a
+                href="https://lovable.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline decoration-black/20 underline-offset-4 transition-colors hover:text-[#f36f21]"
+              >
+                Lovable
+              </a>
             </p>
             <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-[2.6rem]">
               {course.title}
