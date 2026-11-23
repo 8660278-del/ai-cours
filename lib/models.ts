@@ -161,3 +161,71 @@ export async function putProgress(progress: Progress): Promise<Progress> {
   );
   return progress;
 }
+
+export interface PersonalPrompt {
+  id: string;
+  learnerId: string;
+  title: string;
+  purpose: string;
+  category: string;
+  requiredInputs: string[];
+  variables: string[];
+  promptText: string;
+  constraints: string[];
+  outputRequirements: string[];
+  checks: string[];
+  source: "lesson" | "library";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getPersonalPromptsByLearner(
+  learnerId: string
+): Promise<PersonalPrompt[]> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TableName.PERSONAL_PROMPTS,
+      IndexName: IndexName.PERSONAL_PROMPTS_LEARNER,
+      KeyConditionExpression: "#learnerId = :learnerId",
+      ExpressionAttributeNames: {
+        "#learnerId": "learnerId",
+      },
+      ExpressionAttributeValues: {
+        ":learnerId": learnerId,
+      },
+    })
+  );
+
+  const prompts = (result.Items as PersonalPrompt[]) ?? [];
+
+  return prompts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function createPersonalPrompt(
+  data: Omit<PersonalPrompt, "createdAt" | "updatedAt">
+): Promise<PersonalPrompt> {
+  const now = new Date().toISOString();
+  const prompt: PersonalPrompt = {
+    ...data,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TableName.PERSONAL_PROMPTS,
+      Item: prompt,
+    })
+  );
+
+  return prompt;
+}
+
+export async function deletePersonalPrompt(id: string): Promise<void> {
+  await docClient.send(
+    new DeleteCommand({
+      TableName: TableName.PERSONAL_PROMPTS,
+      Key: { id },
+    })
+  );
+}

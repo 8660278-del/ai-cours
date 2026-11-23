@@ -50,6 +50,11 @@ import {
   PresentationReviewPractice,
   VisualizationPractice,
 } from "@/components/lesson4-interactive";
+import {
+  ProcessDecompositionPractice,
+  TaskDiscoveryPractice,
+  TemplateBuilderPractice,
+} from "@/components/module5-interactive";
 import { cn } from "@/lib/utils";
 
 function ResetButton({
@@ -899,6 +904,18 @@ export function LessonInteractive({
 
   if (interactiveId === "presentation-review-practice") {
     return <PresentationReviewPractice />;
+  }
+
+  if (interactiveId === "task-discovery-practice") {
+    return <TaskDiscoveryPractice />;
+  }
+
+  if (interactiveId === "process-decomposition-practice") {
+    return <ProcessDecompositionPractice />;
+  }
+
+  if (interactiveId === "template-builder-practice") {
+    return <TemplateBuilderPractice />;
   }
 
   return (

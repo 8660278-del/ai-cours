@@ -1,7 +1,7 @@
 // Мок-данные для статического режима (без БД)
 // Используются когда USE_DATABASE=false или БД недоступна
 
-import { type Progress, type Service } from "./models";
+import { type PersonalPrompt, type Progress, type Service } from "./models";
 
 export const mockServices: Service[] = [
   {
@@ -40,3 +40,5 @@ export const mockProgress: Progress = {
   createdAt: new Date("2024-01-01").toISOString(),
   updatedAt: new Date("2024-01-01").toISOString(),
 };
+
+export const mockPersonalPrompts: PersonalPrompt[] = [];

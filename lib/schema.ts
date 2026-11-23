@@ -7,6 +7,7 @@ import {
 export const TableName = {
   SERVICES: "services",
   PROGRESS: "progress",
+  PERSONAL_PROMPTS: "personal_prompts",
 } as const;
 
 export type TableName = (typeof TableName)[keyof typeof TableName];
@@ -39,12 +40,28 @@ export const TABLE_SCHEMAS: Record<TableName, TableSchema> = {
     keySchema: [{ AttributeName: "id", KeyType: "HASH" }],
     attributeDefinitions: [{ AttributeName: "id", AttributeType: "S" }],
   },
+  [TableName.PERSONAL_PROMPTS]: {
+    name: TableName.PERSONAL_PROMPTS,
+    keySchema: [{ AttributeName: "id", KeyType: "HASH" }],
+    attributeDefinitions: [
+      { AttributeName: "id", AttributeType: "S" },
+      { AttributeName: "learnerId", AttributeType: "S" },
+    ],
+    globalSecondaryIndexes: [
+      {
+        IndexName: "learnerId-index",
+        KeySchema: [{ AttributeName: "learnerId", KeyType: "HASH" }],
+        Projection: { ProjectionType: "ALL" },
+      },
+    ],
+  },
 };
 
 export const TABLE_NAMES: TableName[] = Object.values(TableName);
 
 export const IndexName = {
   SERVICES_STATUS: "status-index",
+  PERSONAL_PROMPTS_LEARNER: "learnerId-index",
 } as const;
 
 export type IndexName = (typeof IndexName)[keyof typeof IndexName];
