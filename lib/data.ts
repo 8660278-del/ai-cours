@@ -37,7 +37,7 @@ export const resources: ResourceLink[] = [
     title: "Полезные материалы",
     description:
       "Чек-листы, шаблоны и памятки для ежедневной работы с нейросетями.",
-    href: "/#materials",
+    href: "/materials",
   },
   {
     id: "progress",
